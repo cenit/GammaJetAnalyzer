@@ -111,6 +111,7 @@ class GammaJetAnalyzer : public edm::EDAnalyzer
       bool debug_jet;
       bool debug_;
 
+      double theHiggsReferenceMass;
       double minimumPhotonPt;
       double maximumPhotonEta;
       double minimumDRPhotonJet;
@@ -172,14 +173,17 @@ class GammaJetAnalyzer : public edm::EDAnalyzer
       Float_t photonJet_ehcal;
 
       Int_t nComb;
-      Int_t nJet;
+      Int_t nJets;
+  
+      Float_t mbb;
+      Float_t mbbgam;
 
       Float_t jet_pt[4];        
       Float_t jet_eta[4];
       Float_t jet_phi[4];
       Float_t jet_eecal[4];
       Float_t jet_ehcal[4];
-      Float_t jet_btag[4];
+      Int_t jet_btag[4];
 
 
 };

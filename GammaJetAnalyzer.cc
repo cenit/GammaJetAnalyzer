@@ -78,6 +78,8 @@ GammaJetAnalyzer::GammaJetAnalyzer(const edm::ParameterSet& ps)
 
   // Qua iniziano i parametri per customizzare l'analisi:
 
+  theHiggsReferenceMass = ps.getParameter<double>("higgsMass");
+
   minimumPhotonPt =  ps.getParameter<double>("minimumPhotonPt");
   maximumPhotonEta = ps.getParameter<double>("maximumPhotonEta");
 
@@ -213,7 +215,7 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     mcMatchedPhoton = mcMatched(myGenEvent,etaPhoton,phiPhoton,maximumPhotonDR,onlyPhoton);
     onlyPhoton = false;
     mcMatchedParticle = mcMatched(myGenEvent,etaPhoton,phiPhoton,maximumPhotonDR,onlyPhoton);
- 
+
     int momId = 0;
     if (mcMatchedPhoton) 
     {
@@ -256,7 +258,7 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	}
       }
       else      {
-	std::cout << "\tUnable to match this RecoPH with GenPARTICLE #" << photonNumber << std::endl;
+	std::cout << "\tUnable to match a GenParticle with RecoPH #" << photonNumber << std::endl;
       }
     }
     
@@ -318,6 +320,7 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
   for (pho = vectorCandInterestingPhotons.begin(); pho != vectorCandInterestingPhotons.end(); pho++) {
     int thisFlag = ( ( (*flg)==PHOTON || (*flg)==NEUTRAL_HAD )? PHOTON : (*flg) );
+    if (thisFlag<0) thisFlag = 9;   // Metti quelli senza flag ultimi in priorita'
     if ( thisFlag <= thePhotonFlag  &&  (*pho).pt()>thePhotonPt ) {
       thePhotonPt = (*pho).pt();
       thePhotonFlag = (*flg);
@@ -438,6 +441,8 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   
   std::vector<reco::CaloJet>::const_iterator cal1, cal2, bcal1, bcal2;
 
+  double theDMHiggs = 99999.;
+
   for (cal1 = vectorCandInterestingCaloJets.begin(); cal1 != vectorCandInterestingCaloJets.end(); cal1++)  {
     reco::CaloJet localLJet1(*cal1);
     if ( localLJet1.pt() < minimumLJetPt
@@ -477,6 +482,8 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	    double deltaR_Pho_BJet2 = deltaR(localBJet2,etaPhoton,phiPhoton);
 	    double deltaR_Pho_LJet1 = deltaR(localLJet1,etaPhoton,phiPhoton);
 	    double deltaR_Pho_LJet2 = deltaR(localLJet2,etaPhoton,phiPhoton);
+
+            double invMassBJets = (localBJet1.p4()+localBJet2.p4()).mass();
  
             bool okEvent = deltaR_Pho_BJet1 > minimumJetPhotonDeltaR && deltaR_Pho_BJet2 > minimumJetPhotonDeltaR &&
 	                   deltaR_Pho_LJet1 > minimumJetPhotonDeltaR && deltaR_Pho_LJet2 > minimumJetPhotonDeltaR    ;
@@ -484,59 +491,71 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	      
 	      interestingEvent++;
 
-	      photon_pt = thePhoton.pt();
-              photon_eta = thePhoton.eta();
-              photon_phi = thePhoton.phi();
-	      if (mcMatchedParticle) photon_pdgId = mcMatchedParticle->pdg_id();
-              else photon_pdgId = 0;
-	      if (mcMatchedPhoton) photon_momId = (getMother(mcMatchedPhoton))->pdg_id();
-              else photon_momId = 0;
-              photon_flag = thePhotonFlag;
-	      photon_nTk = ntrks;
-              photon_r9 = thePhoton.r9();
+              double deltaMass = invMassBJets - theHiggsReferenceMass;
+              if (deltaMass<0) deltaMass = -deltaMass;
+              if (deltaMass < theDMHiggs) {
+		theDMHiggs = deltaMass;
+		bool onlyPhoton = true;
+		mcMatchedPhoton = mcMatched(myGenEvent,thePhoton.eta(),thePhoton.phi(),maximumPhotonDR,onlyPhoton);
+		onlyPhoton = false;
+		mcMatchedParticle = mcMatched(myGenEvent,thePhoton.eta(),thePhoton.phi(),maximumPhotonDR,onlyPhoton);
 
-              photonJet_pt = thePhotonJet->pt();
-              photonJet_eta = thePhotonJet->eta();
-              photonJet_phi = thePhotonJet->phi();
-              photonJet_eecal = thePhotonJet->emEnergyFraction();
-              photonJet_ehcal = thePhotonJet->energyFractionHadronic();
+		photon_pt = thePhoton.pt();
+		photon_eta = thePhoton.eta();
+		photon_phi = thePhoton.phi();
+		if (mcMatchedParticle) photon_pdgId = mcMatchedParticle->pdg_id();
+		else photon_pdgId = 0;
+		if (mcMatchedPhoton) photon_momId = (getMother(mcMatchedPhoton))->pdg_id();
+		else photon_momId = 0;
+		photon_flag = thePhotonFlag;
+		photon_nTk = ntrks;
+		photon_r9 = thePhoton.r9();
 
-	      nComb = interestingEvent;
-              nJet = vectorCandInterestingCaloJets.size();
+		photonJet_pt = thePhotonJet->pt();
+		photonJet_eta = thePhotonJet->eta();
+		photonJet_phi = thePhotonJet->phi();
+		photonJet_eecal = thePhotonJet->emEnergyFraction();
+		photonJet_ehcal = thePhotonJet->energyFractionHadronic();
+		
+		nComb = interestingEvent;
+		nJets = vectorCandInterestingCaloJets.size();
+		
+                mbb = invMassBJets;
+                mbbgam = (localBJet1.p4()+localBJet2.p4()+thePhoton.p4()).mass();
 
-              jet_pt[0] = localLJet1.pt();
-              jet_eta[0] = localLJet1.eta();
-              jet_phi[0] = localLJet1.phi();
-              jet_eecal[0] = localLJet1.emEnergyFraction();
-              jet_ehcal[0] = localLJet1.energyFractionHadronic();
-              jet_btag[0] = detBTag(myGenEvent, localLJet1.eta(), localLJet1.phi(), maximumPhotonDR);
-
-              jet_pt[1] = localLJet2.pt();
-              jet_eta[1] = localLJet2.eta();
-              jet_phi[1] = localLJet2.phi();
-              jet_eecal[1] = localLJet2.emEnergyFraction();
-              jet_ehcal[1] = localLJet2.energyFractionHadronic();
-              jet_btag[1] = detBTag(myGenEvent, localLJet2.eta(), localLJet2.phi(), maximumPhotonDR);
+		jet_pt[0]  = localLJet1.pt();
+		jet_eta[0] = localLJet1.eta();
+		jet_phi[0] = localLJet1.phi();
+		jet_eecal[0] = localLJet1.emEnergyFraction();
+		jet_ehcal[0] = localLJet1.energyFractionHadronic();
+		jet_btag[0]  = (detBTag(myGenEvent, localLJet1.eta(), localLJet1.phi(), maximumPhotonDR)?1:0);
+		
+		jet_pt[1]  = localLJet2.pt();
+		jet_eta[1] = localLJet2.eta();
+		jet_phi[1] = localLJet2.phi();
+		jet_eecal[1] = localLJet2.emEnergyFraction();
+		jet_ehcal[1] = localLJet2.energyFractionHadronic();
+		jet_btag[1]  = (detBTag(myGenEvent, localLJet2.eta(), localLJet2.phi(), maximumPhotonDR)?1:0);
 	      
-               jet_pt[2] = localBJet1.pt();
-              jet_eta[2] = localBJet1.eta();
-              jet_phi[2] = localBJet1.phi();
-              jet_eecal[2] = localBJet1.emEnergyFraction();
-              jet_ehcal[2] = localBJet1.energyFractionHadronic();
-              jet_btag[2] = detBTag(myGenEvent, localBJet1.eta(), localBJet1.phi(), maximumPhotonDR);
+		jet_pt[2]  = localBJet1.pt();
+		jet_eta[2] = localBJet1.eta();
+		jet_phi[2] = localBJet1.phi();
+		jet_eecal[2] = localBJet1.emEnergyFraction();
+		jet_ehcal[2] = localBJet1.energyFractionHadronic();
+		jet_btag[2]  = (detBTag(myGenEvent, localBJet1.eta(), localBJet1.phi(), maximumPhotonDR)?1:0);
 
-              jet_pt[3] = localBJet2.pt();
-              jet_eta[3] = localBJet2.eta();
-              jet_phi[3] = localBJet2.phi();
-              jet_eecal[3] = localBJet2.emEnergyFraction();
-              jet_ehcal[3] = localBJet2.energyFractionHadronic();
-              jet_btag[3] = detBTag(myGenEvent, localBJet2.eta(), localBJet2.phi(), maximumPhotonDR);
+		jet_pt[3]  = localBJet2.pt();
+		jet_eta[3] = localBJet2.eta();
+		jet_phi[3] = localBJet2.phi();
+		jet_eecal[3] = localBJet2.emEnergyFraction();
+		jet_ehcal[3] = localBJet2.energyFractionHadronic();
+		jet_btag[3]  = (detBTag(myGenEvent, localBJet2.eta(), localBJet2.phi(), maximumPhotonDR)?1:0);
 
 	      // Cosi' riempie tutte le combinazioni possibili
               // Poi, nell'analisi col root tree dobbiamo, ad esempio, scegliere solo gli eventi con
               //       "interestingEvent == 1" per prendere solo la prima combinazione.
-	      theTree->Fill();
-
+	      //	      theTree->Fill();
+	      }
 	    }
 	  }
 	}
@@ -545,9 +564,10 @@ void GammaJetAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   }
 
   if (interestingEvent>0) {
-    // Se c'e' piu' di una combinazione gli facciamo riempire solo l'ultima?
     nEvtSel++;
-    //    theTree->Fill();
+    // Se c'e' piu' di una combinazione gli facciamo riempire solo quella che ha
+    // la massa dei due jet B piu' vicina a quella dell'Higgs che cerchiamo
+    theTree->Fill();
   }
 
 
@@ -747,7 +767,8 @@ int GammaJetAnalyzer::photonFlag(const HepMC::GenEvent *myGE, HepMC::GenParticle
            p != mcp->production_vertex()->particles_end(HepMC::descendants); p++) {
       if ( (*p)->status()==1 && (*p)->pdg_id()==22 && (*p)!=mcp ) {
 	mcSister = (*p);
-        hDrPizero -> Fill(deltaR(mcSister,eta,phi));
+        double ptPhoton = sqrt( pow((*p)->momentum().px(),2) + pow((*p)->momentum().py(),2) );
+        if (ptPhoton > minimumPhotonPt) hDrPizero -> Fill(deltaR(mcSister,eta,phi));
       }
     }
   }
@@ -772,11 +793,10 @@ int GammaJetAnalyzer::photonFlag(const HepMC::GenEvent *myGE, HepMC::GenParticle
 
   if (nCha > maximumChargedInCone)  theFlag = CHARGED_JET;
   else if (ptSum > ptThresholdInCone) theFlag = NEUTRAL_JET;
-  else if (pdgId |= 22 || 
+  else if (pdgId != 22 || 
 	                  ( momId >= 100 && momId < 1000) ) theFlag = NEUTRAL_HAD;
   else theFlag = PHOTON;
   // in ogni caso salviamo la pdgId e la mamma nel root tree per ri-flaggare, nel caso, sull'output finale.
-
   //  std::cout << "*** In photonFlag(), nCha, ptSum = " << nCha << " , " << ptSum << " => flag = " << theFlag << std::endl;
   return theFlag;
 }
@@ -848,12 +868,18 @@ void  GammaJetAnalyzer::beginJob(const edm::EventSetup& iSetup)
   theTree->Branch("photonJet_eecal",&photonJet_eecal,"photonJet_eecal/F");
   theTree->Branch("photonJet_ehcal",&photonJet_ehcal,"photonJet_ehcal/F");
 
+  theTree->Branch("nJets",&nJets,"nJets/I");
+  theTree->Branch("nComb",&nComb,"nComb/I");
+
+  theTree->Branch("mbb" ,&mbb ,"mbb/F ");
+  theTree->Branch("mbbgam",&mbbgam,"mbbgam/F");
+
   theTree->Branch("jet_pt",&jet_pt,"jet_pt[4]/F");
   theTree->Branch("jet_eta",&jet_eta,"jet_eta[4]/F");
   theTree->Branch("jet_phi",&jet_phi,"jet_phi[4]/F");
   theTree->Branch("jet_eecal",&jet_eecal,"jet_eecal[4]/F");
   theTree->Branch("jet_ehcal",&jet_ehcal,"jet_ehcal[4]/F");
-  theTree->Branch("jet_btag",&jet_ehcal,"jet_btag[4]/I");
+  theTree->Branch("jet_btag",&jet_btag,"jet_btag[4]/I");
 
 
   
