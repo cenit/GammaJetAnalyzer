@@ -1,0 +1,33 @@
+language: cpp
+
+env:
+  global:
+    - ROOT_VERSION=6.10.08
+
+os:
+  - linux
+  - osx
+
+compiler: 
+    - gcc
+    - clang
+
+matrix:
+    exclude:
+    - os: osx
+      compiler: gcc
+    - os: linux
+      compiler: clang
+
+install:
+  # Linux Setup 
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget --no-check-certificate https://root.cern.ch/download/root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar -xzf root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz                                                  ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then . ./root/bin/thisroot.sh                                                                                            ;fi 
+# OSX Setup 
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then wget --no-check-certificate https://root.cern.ch/download/root_v${ROOT_VERSION}.macosx64-10.11-clang80.tar.gz       ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then tar -xzf root_v${ROOT_VERSION}.macosx64-10.11-clang80.tar.gz                                                        ;fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then . ./root/bin/thisroot.sh                                                                                            ;fi 
+
+script:
+  - mkdir build && cd build && cmake .. && cmake --build . && cd ..
