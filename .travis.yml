@@ -12,6 +12,11 @@ compiler:
     - gcc
     - clang
 
+addons:
+  apt:
+    packages:
+    - libtbb-dev
+
 matrix:
     exclude:
     - os: osx

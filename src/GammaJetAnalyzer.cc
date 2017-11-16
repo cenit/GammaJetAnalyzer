@@ -10,7 +10,7 @@
 //         Created:  Thu Sep 27 17:00:00 CEST 2007
 //
 
-#include "APAnalyzers/GammaJetAnalyzer/interface/GammaJetAnalyzer.h"
+#include "GammaJetAnalyzer.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
