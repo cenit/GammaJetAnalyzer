@@ -3,36 +3,43 @@ language: cpp
 env:
   global:
     - ROOT_VERSION=6.10.08
+    - CLHEP_PATH=/home/travis/build/cenit/clhep
+    - VO_CMS_SW_DIR=/home/travis/build/cenit/cmssw
+    - SCRAM_ARCH=slc6_amd64_gcc530
 
 os:
   - linux
-  - osx
 
 compiler: 
     - gcc
-    - clang
 
 addons:
   apt:
     packages:
     - libtbb-dev
 
-matrix:
-    exclude:
-    - os: osx
-      compiler: gcc
-    - os: linux
-      compiler: clang
-
 install:
-  # Linux Setup 
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget --no-check-certificate https://root.cern.ch/download/root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz ;fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then tar -xzf root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz                                                  ;fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then . ./root/bin/thisroot.sh                                                                                            ;fi 
-# OSX Setup 
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then wget --no-check-certificate https://root.cern.ch/download/root_v${ROOT_VERSION}.macosx64-10.11-clang80.tar.gz       ;fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then tar -xzf root_v${ROOT_VERSION}.macosx64-10.11-clang80.tar.gz                                                        ;fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then . ./root/bin/thisroot.sh                                                                                            ;fi 
+  # ROOT Setup 
+  - wget --no-check-certificate https://root.cern.ch/download/root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz
+  - tar -xzf root_v${ROOT_VERSION}.Linux-ubuntu14-x86_64-gcc4.8.tar.gz
+  - . ./root/bin/thisroot.sh
+  # CLHEP Setup
+  - wget http://proj-clhep.web.cern.ch/proj-clhep/DISTRIBUTION/tarFiles/clhep-2.3.4.5.tgz
+  - tar zxvf clhep-2.3.4.5.tgz 
+  - mv 2.3.4.5 clhep_2.3.4.5
+  - cd clhep_2.3.4.5/CLHEP/
+  - mkdir build ; cd build ; cmake .. "-DCMAKE_INSTALL_PREFIX=${CLHEP_PATH}"
+  - make -j
+  - cmake --build . --target install
+  - cd ../..
+  #CMSSW Setup
+  - mkdir -p $VO_CMS_SW_DIR
+  - wget -O $VO_CMS_SW_DIR/bootstrap.sh http://cmsrep.cern.ch/cmssw/repos/bootstrap.sh
+  - chmod +x $VO_CMS_SW_DIR/bootstrap.sh
+  - $VO_CMS_SW_DIR/bootstrap.sh setup -path $VO_CMS_SW_DIR -arch $SCRAM_ARCH
+  - $VO_CMS_SW_DIR/common/cmspkg -a $SCRAM_ARCH update
+  - $VO_CMS_SW_DIR/common/cmspkg -a $SCRAM_ARCH install cms+cmssw+CMSSW_8_0_20
+
 
 script:
   - mkdir build && cd build && cmake .. && cmake --build . && cd ..

@@ -1,3 +1,0 @@
-[submodule "cmssw"]
-	path = cmssw
-	url = https://github.com/cms-sw/cmssw.git
