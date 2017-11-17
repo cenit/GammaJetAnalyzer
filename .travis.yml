@@ -29,7 +29,6 @@ install:
   - mv 2.3.4.5 clhep_2.3.4.5
   - cd clhep_2.3.4.5/CLHEP/
   - mkdir build ; cd build ; cmake .. "-DCMAKE_INSTALL_PREFIX=${CLHEP_PATH}"
-  - make -j
   - cmake --build . --target install
   - cd ../..
   #CMSSW Setup
