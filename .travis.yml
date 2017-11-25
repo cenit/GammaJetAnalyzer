@@ -17,6 +17,10 @@ addons:
   apt:
     packages:
     - libtbb-dev
+    - rpm
+    - libnss3-dev
+    - yum
+    - yum-utils
 
 install:
   # ROOT Setup 
@@ -31,14 +35,28 @@ install:
   - mkdir build ; cd build ; cmake .. "-DCMAKE_INSTALL_PREFIX=${CLHEP_PATH}"
   - cmake --build . --target install
   - cd ../..
+  # SCRAM Setup
+  - git clone https://github.com/cms-sw/SCRAM
+  - cd SCRAM/
+  - export VERSION=1.0.0
+  - export INSTALL_BASE=$(pwd)
+  - export PREFIX=$(pwd)
+  - make
+  - export PATH=$(pwd)/bin:$PATH
   #CMSSW Setup
+  # sudo dpkg-reconfigure dash  # use bash as /bin/sh to avoid problems with `source` command, invalid in dash, but I don't know how to do in non-interactive mode (and also requires sudo)
+  # ./cmssw_build.sh   #does not work even on my computer
+  # (be sure to not have python3 on path for what follows)
+  # alternative setup (does not work too...):
   - mkdir -p $VO_CMS_SW_DIR
   - wget -O $VO_CMS_SW_DIR/bootstrap.sh http://cmsrep.cern.ch/cmssw/repos/bootstrap.sh
   - chmod +x $VO_CMS_SW_DIR/bootstrap.sh
   - $VO_CMS_SW_DIR/bootstrap.sh setup -path $VO_CMS_SW_DIR -arch $SCRAM_ARCH
+  # fails here above with a problem related to NSS library, I don't know how to fix it
   - $VO_CMS_SW_DIR/common/cmspkg -a $SCRAM_ARCH update
   - $VO_CMS_SW_DIR/common/cmspkg -a $SCRAM_ARCH install cms+cmssw+CMSSW_8_0_20
 
 
 script:
-  - mkdir build && cd build && cmake .. && cmake --build . && cd ..
+  - mkdir build && cd build
+  - cmake .. && cmake --build .

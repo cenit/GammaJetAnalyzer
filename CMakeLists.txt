@@ -13,7 +13,6 @@ set (CMSSW_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/cmssw)
 
 include_directories(${ROOT_INCLUDE_DIRS} ${CMSSW_INCLUDE_DIRS})
 
-
 add_executable(GammaJetAnalyzer 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/GammaJetAnalyzer.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/GammaJetAnalyzer.h
